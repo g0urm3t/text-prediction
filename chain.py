@@ -5,13 +5,8 @@ def _finalizer_sort(e):
     return e[1]
 
 class Chain:
-    def __init__(self, weights: str|dict[str:list[tuple[str:int]]] = None):
-        if isinstance(weights, str):
-            self._finalized_weights: dict[str:list[tuple[str:int]]] = self._load(weights)
-        elif isinstance(weights, str):
-            self._finalized_weights: dict[str:list[tuple[str:int]]] = weights
-        else:
-            self._finalized_weights: dict[str:list[tuple[str:int]]] = {}
+    def __init__(self):
+        self._finalized_weights: dict[str:list[tuple[str:int]]] = {}
         self._weights: dict[str:{str:int}] = {}
         self.finalized = False
 
@@ -66,16 +61,13 @@ class Chain:
             pickle.dump(self, file, protocol=pickle.HIGHEST_PROTOCOL)
 
 class MultiChain:
-    def __init__(self, depth: int, depth_weight_adjustment: float=3.15, load_path=None):
+    def __init__(self, depth: int, depth_weight_adjustment: float=3.15):
         if type(depth) != int or depth < 0:
             raise ValueError("Argument \"depth\" must be a positive integer.")
         self._depth = depth
         self._depth_weight_adjustment=depth_weight_adjustment
         self.finalized = False
-        if load_path:
-            self._load(load_path)
-        else:
-            self._chains: list[Chain] = [Chain() for _ in range(0, depth)]
+        self._chains: list[Chain] = [Chain() for _ in range(0, depth)]
 
     def train(self, origin: str, target: str):
         if type(origin) == str:
