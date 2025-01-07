@@ -1,0 +1,6 @@
+# data
+pickles/
+raw_data/
+
+# python
+__pycache__
