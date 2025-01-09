@@ -5,10 +5,14 @@ def _finalizer_sort(e):
     return e[1]
 
 class Chain:
-    def __init__(self):
+    def __init__(self, weight_adjustment):
         self._finalized_weights: dict[str:list[tuple[str:int]]] = {}
         self._weights: dict[str:{str:int}] = {}
         self.finalized = False
+        self._weight_adjustment = weight_adjustment
+
+    def set_weight_adjustment(self, weight_adjustment):
+        self._weight_adjustment = weight_adjustment
 
     def train(self, origin: str, target: str) -> None:
         origin_weights = self._weights.get(origin)
@@ -21,14 +25,14 @@ class Chain:
         if not target_weight:
             target_weight = 0
         origin_weights.update({
-            target: (target_weight + 1)
+            target: (target_weight + self._weight_adjustment)
         })
 
-    def initialize_for_use(self, weight_adjustment: float=1.0) -> None:
+    def initialize_for_use(self) -> None:
         for origin, weights in self._weights.items():
             weights_list = []
             for value, weight in weights.items():
-                weights_list.append((value, int(weight * weight_adjustment)))
+                weights_list.append((value, weight))
             weights_list.sort(key=_finalizer_sort, reverse=True)
             self._finalized_weights.update({
                 origin:weights_list
@@ -61,13 +65,17 @@ class Chain:
             pickle.dump(self, file, protocol=pickle.HIGHEST_PROTOCOL)
 
 class MultiChain:
-    def __init__(self, depth: int, depth_weight_adjustment: float=3.15):
+    def __init__(self, depth: int, depth_weight_adjustment: float=2.35):
         if type(depth) != int or depth < 0:
             raise ValueError("Argument \"depth\" must be a positive integer.")
         self._depth = depth
-        self._depth_weight_adjustment=depth_weight_adjustment
         self.finalized = False
-        self._chains: list[Chain] = [Chain() for _ in range(0, depth)]
+        self._chains: list[Chain] = [Chain(pow(depth_weight_adjustment, index + 1)) for index in range(0, depth)]
+
+
+    def set_weight_adjustment(self, weight_adjustment):
+        for index, chain in enumerate(self._chains):
+            chain.set_weight_adjustment(pow(weight_adjustment, index + 1))
 
     def train(self, origin: str, target: str):
         if type(origin) == str:
@@ -82,8 +90,8 @@ class MultiChain:
                 )
 
     def initialize_for_use(self):
-        for index, chain in enumerate(self._chains):
-            chain.initialize_for_use(weight_adjustment=(pow(index + 1, self._depth_weight_adjustment)))
+        for chain in self._chains:
+            chain.initialize_for_use()
         self.finalized = True
 
     def _steps(self, origin: str, depth: int=10):
@@ -120,18 +128,6 @@ class MultiChain:
             raise Exception("Finalize the Chain first!")
         with open(path, "wb+") as file:
             pickle.dump(self, file, protocol=pickle.HIGHEST_PROTOCOL)
-
-def train_multi_chain_from_file(path, depth):
-    chain = MultiChain(depth=depth)
-    with open(path, "r", encoding="utf8") as source_file:
-        data = source_file.read().lower().split(" ")
-        for index in range(depth, len(data)):
-            chain.train(
-                data[max(0, index - depth):index],
-                data[index]
-            )
-    chain.initialize_for_use()
-    return chain
 
 def load_chain(path):
     with open(path, 'rb') as handle:

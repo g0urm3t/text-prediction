@@ -1,6 +1,15 @@
 # data
 pickles/
+*.pickle
 raw_data/
+
+# scripts
+train.py
 
 # python
 __pycache__
+
+# data gethering
+*.robot
+robot_logs/
+formatting_script.py
